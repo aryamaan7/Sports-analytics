@@ -1,0 +1,40 @@
+import pandas as pd 
+import numpy as np
+import statsmodels.formula.api as smf
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+IPL18 = pd.read_excel("C:/Users/aryam/Downloads/IPL2018teams.xlsx")
+print(IPL18.columns.tolist())
+
+IPL18['hwin'] = np.where(IPL18['home_team']==IPL18['winning_team'],1,0)
+IPL18['awin'] = np.where(IPL18['away_team']==IPL18['winning_team'],1,0)
+IPL18['htruns'] = np.where(IPL18['home_team']==IPL18['inn1team'],IPL18['innings1'],IPL18['innings2'])
+IPL18['atruns'] = np.where(IPL18['away_team']==IPL18['inn1team'],IPL18['innings1'],IPL18['innings2'])
+IPL18['count']=1
+
+IPLhome = IPL18.groupby('home_team')['count','hwin','htruns','atruns'].sum().reset_index()
+IPLhome = IPLhome.rename(columns={'home_team': 'team', 'count':'Ph', 'htruns':'htrunsh', 'atruns':'atrunsh'})
+IPLhome
+
+IPLaway = IPL18.groupby('away_team')['count','awin','htruns','atruns'].sum().reset_index()
+IPLaway = IPLaway.rename(columns={'away_team': 'team', 'count':'Pa','htruns': 'htrunsa','atruns': 'atrunsa'})
+IPLaway
+
+IPL18 = pd.merge(IPLhome, IPLaway, on=['team'])
+IPL18
+
+IPL18['W'] = IPL18['hwin']+IPL18['awin']
+IPL18['G'] = IPL18['Ph']+IPL18['Pa']
+IPL18['R'] = IPL18['htrunsh']+IPL18['atrunsa']
+IPL18['RA'] = IPL18['atrunsh']+IPL18['htrunsa']
+IPL18
+
+IPL18['wpc']=IPL18['W']/IPL18['G']
+IPL18['pyth']=IPL18['R']**2/(IPL18['R']**2 + IPL18['RA']**2)
+IPL18
+
+sns.relplot(x="pyth",y="wpc",data=IPL18)
+
+pyth_lm = smf.ols(formula = 'wpc~pyth', data=IPL18).fit()
+pyth_lm.summary()
